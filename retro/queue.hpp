@@ -25,6 +25,14 @@ struct queue
   };
 };
 
+/*! \brief Represents a partially retroactive queue.
+ *  \p This container allows similar functionality to a STL queue, except that
+ *     push and pop operations can be performed retroactively (in the past).
+ *     Past operations can also be reverted. However, queries can only be
+ *     performed on the current state of the queue.
+ *
+ *  \tparam The type of elements to store in the container.
+ */
 template <typename T>
 class partial_queue
 {

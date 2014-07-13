@@ -237,6 +237,16 @@ class partial_queue
       return pop();
     }
 
+    /*! \brief Swap the contents of this queue with another.
+     *  \param other The queue to swap with.
+     */
+    void swap(partial_queue &other)
+    {
+      std::swap(size_, other.size_);
+      std::swap(front_, other.front_);
+      std::swap(data_, other.data_);
+    }
+
     /*! \brief Retroactively revert a previous push operation.
      *  \param t The time point to revert.
      */

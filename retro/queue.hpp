@@ -54,8 +54,13 @@ class partial_queue
     class time_point
     {
       private:
-        time_point(inner_iterator it)
+        time_point(const inner_iterator &it)
           : it(it)
+        {
+        }
+
+        time_point(inner_iterator&& it)
+          : it(std::move(it))
         {
         }
 
@@ -155,7 +160,7 @@ class partial_queue
       // contains one element.
       if (front_ == data_.end()) front_ = last;
 
-      return time_point<queue::push>(last);
+      return time_point<queue::push>(std::move(last));
     }
 
     /*! \brief Insert an element to the end of the queue in its present state.
@@ -199,7 +204,7 @@ class partial_queue
       if (it->second) move_front_pred();
 
       // Return an iterator to the new operation.
-      return time_point<queue::push>(it);
+      return time_point<queue::push>(std::move(it));
     }
 
     /*! \brief Retroactively insert an element to the end of the queue before a

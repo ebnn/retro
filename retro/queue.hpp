@@ -211,20 +211,20 @@ class partial_queue
       // This element was never pushed.
       --size_;
 
-      if (front_ == t.it)
-      {
-        // We're removing the front, so move it to the right to ensure validity.
-        ++front_;
-      }
-
-      // Remove the element corresponding to the push.
-      data_.erase(t.it);
-
       // If t occurs before front, then that means we've previously popped an
       // element that no longer exists, so it should have popped the element
       // after it. Hence, move the front to its successor.
       if (t.it->second)
         move_front_succ();
+
+      if (front_ == t.it)
+      {
+        // We're removing the front, so move it to the right to ensure validity.
+        move_front_succ();
+      }
+
+      // Remove the element corresponding to the push.
+      data_.erase(t.it);
     }
 
     /*! \brief Retroactively revert a previous pop operation.
@@ -246,7 +246,7 @@ class partial_queue
       // When moving the front pointer to the right, the current front
       // would be 'before' the new front.
       front_->second = true;
-      ++front_;
+      ++front_; front_->second = false;
     }
 
     void move_front_pred(void)
@@ -254,8 +254,8 @@ class partial_queue
       // When moving the front pointer to the left, the element before
       // the current front would no longer be 'before' the new front
       // (as it will *be* the front).
-      --front_;
-      front_->second = false;
+      front_->second = true;
+      --front_; front_->second = false;
     }
 }; // end partial_queue
 

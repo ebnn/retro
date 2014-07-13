@@ -188,6 +188,11 @@ class partial_queue
         data_.push_front(std::make_pair(std::move(val), true)); 
         move_front_pred();
       }
+      else if (it == front_)
+      {
+        // Inserting before the front is also a special case
+        data_.insert(front_, std::make_pair(std::move(val), false));
+      }
       else
       {
         // Whether this element is before the front pointer is determined
@@ -264,9 +269,10 @@ class partial_queue
       // element that no longer exists, so it should have popped the element
       // after it. Hence, move the front to its successor.
       if (t.it->second)
+      {
         move_front_succ();
-
-      if (front_ == t.it)
+      }
+      else if (front_ == t.it)
       {
         // We're removing the front, so move it to the right to ensure validity.
         move_front_succ();
@@ -294,8 +300,8 @@ class partial_queue
     {
       // When moving the front pointer to the right, the current front
       // would be 'before' the new front.
-      front_->second = true;
-      ++front_; front_->second = false;
+      front_->second = true; ++front_;
+      if (front_ != data_.end()) front_->second = false;
     }
 
     void move_front_pred(void)
@@ -303,8 +309,8 @@ class partial_queue
       // When moving the front pointer to the left, the element before
       // the current front would no longer be 'before' the new front
       // (as it will *be* the front).
-      front_->second = true;
-      --front_; front_->second = false;
+      front_->second = false; --front_;
+      if (front_ != data_.end()) front_->second = false;
     }
 }; // end partial_queue
 

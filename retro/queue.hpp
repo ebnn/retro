@@ -1,0 +1,254 @@
+/*! \file queue.hpp
+ *  \brief Implementation of a partially retroactive queue.
+ */
+
+#pragma once
+
+#include <list>
+
+namespace retro
+{
+
+/*! \brief Specifies the operations available for a queue.
+ */
+struct queue
+{
+  enum
+  {
+    /*! \brief Represents pushing (enqueuing) an element into the queue.
+     */
+    push,
+
+    /*! \brief Represents popping (dequeuing) an element from the queue.
+     */
+    pop
+  };
+};
+
+template <typename T>
+class partial_queue
+{
+  public:
+    typedef T value_type;
+    typedef std::list<value_type> container_type;
+    typedef typename container_type::reference reference;
+    typedef typename container_type::const_reference const_reference;
+    typedef typename container_type::size_type size_type;
+    typedef std::list<std::pair<value_type, bool>> inner_container_type;
+    typedef typename inner_container_type::iterator inner_iterator;
+
+  public:
+    /*! \brief Represents an operation performed at some point in time.
+     *  \tparam Op The operation that was performed (one of the operations in
+     *             retro::queue).
+     */
+    template <std::size_t Op> 
+    class time_point
+    {
+      private:
+        time_point(inner_iterator it)
+          : it(it)
+        {
+        }
+
+        // Iterator to the element in the linked list that represents
+        // the value that was pushed/popped by this operation.
+        inner_iterator it;
+
+        friend class partial_queue<T>;
+    };
+
+    /*! \brief Construct an empty partially retroactive queue.
+     */
+    partial_queue(void)
+      : size_(0), front_(data_.begin())
+    {
+    }
+
+    /*! \brief Returns the number of elements in the queue at present.
+     */
+    size_type size(void) const
+    {
+      return size_;
+    }
+
+    /*! \brief Returns the maximum number of elements that this container
+     *         can store.
+     */
+    size_type max_size(void) const
+    {
+      return data_.max_size();
+    }
+
+    /*! \brief Returns whether the queue is empty.
+     */
+    bool empty(void) const
+    {
+      return size() == 0;
+    }
+
+    /*! \brief Returns the element at the front of the queue at present.
+     *  \return A reference to the front (oldest) element.
+     */
+    reference front()
+    {
+      return front_->first;
+    }
+
+    /*! \brief Returns the element at the front of the queue at present.
+     *  \return A const reference to the front (oldest) element.
+     */
+    const_reference front() const
+    {
+      return front();
+    }
+
+    /*! \brief Returns the element at the back of the queue at present.
+     *  \return A reference to the back (newest) element.
+     */
+    reference back()
+    {
+      return data_.back().first;
+    }
+
+    /*! \brief Returns the element at the back of the queue at present.
+     *  \return A const reference to the back (newest) element.
+     */
+    const_reference back() const
+    {
+      return back();
+    }
+
+    /*! \brief Insert an element to the end of the queue in its present state.
+     *  \return A new time point representing this operation.
+     */
+    time_point<queue::push> push(const T &val)
+    {
+      // Add the new element to the back of the queue.
+      data_.push_back(std::make_pair(val, false)); ++size_;
+
+      // Find an iterator to the latest time point.
+      inner_iterator last = data_.end(); --last;
+
+      // Set front to be the first (and only) element if the queue only
+      // contains one element.
+      if (front_ == data_.end()) front_ = last;
+
+      return time_point<queue::push>(last);
+    }
+
+    /*! \brief Retroactively insert an element to the end of the queue before a
+     *         previous time point.
+     *  \param t The time point of the operation just before this one.
+     *  \param val The value to insert.
+     *  \return A new time point representing this retroactive operation.
+     */
+    template <std::size_t Op>
+    time_point<queue::push> push(const time_point<Op> &t, const T &val)
+    {
+      inner_iterator it = t.it;
+      if (it == data_.begin())
+      {
+        // Inserting before the first element is a special case
+        data_.push_front(std::make_pair(val, true)); 
+        move_front_pred();
+      }
+      else
+      {
+        // Whether this element is before the front pointer is determined
+        // by the element before this one.
+        inner_iterator before = it; --before;
+        data_.insert(it, std::make_pair(val, before->second));
+      }
+
+      // Point iterator to the newly inserted element.
+      --it; ++size_;
+
+      // Move the front to the left if this operation is before the front
+      // because we pushed an element that should've been popped before.
+      if (it->second) move_front_pred();
+
+      // Return an iterator to the new operation.
+      return time_point<queue::push>(it);
+    }
+
+    /*! \brief Pop an element from the front of the queue in its present state.
+     *  \return A new time point representing this operation.
+     */
+    time_point<queue::pop> pop(void)
+    {
+      --size_;
+
+      time_point<queue::pop> old(front_); 
+      move_front_succ();
+      return old;
+    }
+
+    /*! \brief Retroactively pop an element from the front of the queue before
+     *         a previous time point.
+     *  \param t The time point of the operation just before this one.
+     *  \return A new time point representing this operation.
+     */
+    template <std::size_t Op>
+    time_point<queue::pop> pop(const time_point<Op> &)
+    {
+      return pop();
+    }
+
+    /*! \brief Retroactively revert a previous push operation.
+     *  \param t The time point to revert.
+     */
+    void revert(const time_point<queue::push> &t)
+    {
+      // This element was never pushed.
+      --size_;
+
+      if (front_ == t.it)
+      {
+        // We're removing the front, so move it to the right to ensure validity.
+        ++front_;
+      }
+
+      // Remove the element corresponding to the push.
+      data_.erase(t.it);
+
+      // If t occurs before front, then that means we've previously popped an
+      // element that no longer exists, so it should have popped the element
+      // after it. Hence, move the front to its successor.
+      if (t.it->second)
+        move_front_succ();
+    }
+
+    /*! \brief Retroactively revert a previous pop operation.
+     *  \param t The time point to revert.
+     */
+    void revert(const time_point<queue::pop> &t)
+    {
+      move_front_pred();
+      ++size_; // One less pop means the size increases by 1
+    }
+
+  private:
+    size_type size_;
+    inner_container_type data_;
+    inner_iterator front_;
+
+    void move_front_succ(void)
+    {
+      // When moving the front pointer to the right, the current front
+      // would be 'before' the new front.
+      front_->second = true;
+      ++front_;
+    }
+
+    void move_front_pred(void)
+    {
+      // When moving the front pointer to the left, the element before
+      // the current front would no longer be 'before' the new front
+      // (as it will *be* the front).
+      --front_;
+      front_->second = false;
+    }
+}; // end partial_queue
+
+} // end retro

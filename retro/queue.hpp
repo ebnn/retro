@@ -5,6 +5,7 @@
 #pragma once
 
 #include <list>
+#include <utility>
 
 namespace retro
 {
@@ -45,7 +46,6 @@ class partial_queue
     typedef std::list<std::pair<value_type, bool>> inner_container_type;
     typedef typename inner_container_type::iterator inner_iterator;
 
-  public:
     /*! \brief Represents an operation performed at some point in time.
      *  \tparam Op The operation that was performed (one of the operations in
      *             retro::queue).
@@ -70,6 +70,17 @@ class partial_queue
      */
     partial_queue(void)
       : size_(0), front_(data_.begin())
+    {
+    }
+
+    /*! \brief Copy an existing queue.
+     */
+    partial_queue(const partial_queue &other) = default;
+
+    /*! \brief Acquire the state of an existing queue by moving it.
+     */
+    partial_queue(partial_queue&& other)
+      : size_(other.size_), front_(other.front_), data_(std::move(other.data_))
     {
     }
 
@@ -127,13 +138,15 @@ class partial_queue
       return back();
     }
 
-    /*! \brief Insert an element to the end of the queue in its present state.
+    /*! \brief Insert an element to the end of the queue in its present state
+     *         by moving it.
+     *  \brief val The value to move.
      *  \return A new time point representing this operation.
      */
-    time_point<queue::push> push(const T &val)
+    time_point<queue::push> push(T&& val)
     {
       // Add the new element to the back of the queue.
-      data_.push_back(std::make_pair(val, false)); ++size_;
+      data_.emplace_back(std::move(val), false); ++size_;
 
       // Find an iterator to the latest time point.
       inner_iterator last = data_.end(); --last;
@@ -145,20 +158,29 @@ class partial_queue
       return time_point<queue::push>(last);
     }
 
+    /*! \brief Insert an element to the end of the queue in its present state.
+     *  \brief val The value to insert.
+     *  \return A new time point representing this operation.
+     */
+    time_point<queue::push> push(const T &val)
+    {
+      return push(val);
+    }
+
     /*! \brief Retroactively insert an element to the end of the queue before a
-     *         previous time point.
+     *         previous time point by moving it.
      *  \param t The time point of the operation just before this one.
-     *  \param val The value to insert.
+     *  \param val The value to move.
      *  \return A new time point representing this retroactive operation.
      */
     template <std::size_t Op>
-    time_point<queue::push> push(const time_point<Op> &t, const T &val)
+    time_point<queue::push> push(const time_point<Op> &t, T&& val)
     {
       inner_iterator it = t.it;
       if (it == data_.begin())
       {
         // Inserting before the first element is a special case
-        data_.push_front(std::make_pair(val, true)); 
+        data_.push_front(std::make_pair(std::move(val), true)); 
         move_front_pred();
       }
       else
@@ -166,7 +188,7 @@ class partial_queue
         // Whether this element is before the front pointer is determined
         // by the element before this one.
         inner_iterator before = it; --before;
-        data_.insert(it, std::make_pair(val, before->second));
+        data_.insert(it, std::make_pair(std::move(val), before->second));
       }
 
       // Point iterator to the newly inserted element.
@@ -178,6 +200,18 @@ class partial_queue
 
       // Return an iterator to the new operation.
       return time_point<queue::push>(it);
+    }
+
+    /*! \brief Retroactively insert an element to the end of the queue before a
+     *         previous time point.
+     *  \param t The time point of the operation just before this one.
+     *  \param val The value to insert.
+     *  \return A new time point representing this retroactive operation.
+     */
+    template <std::size_t Op>
+    time_point<queue::push> push(const time_point<Op> &t, const T &val)
+    {
+      return push(t, val);
     }
 
     /*! \brief Pop an element from the front of the queue in its present state.

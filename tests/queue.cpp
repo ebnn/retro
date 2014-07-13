@@ -117,3 +117,20 @@ TEST(partial_queue, revertPushGivesCorrectFrontAndBack)
   q.revert(t3);
   ASSERT_EQ(0, q.size());
 }
+
+TEST(partial_queue, moveIsEquivalentToPush)
+{
+  retro::partial_queue<std::pair<int, int>> q;
+
+  std::pair<int, int> p1 = { 1, 2 };
+  std::pair<int, int> p2 = { 3, 4 };
+
+  q.push(std::move(p1));
+  q.push(std::move(p2));
+
+  ASSERT_EQ(2, q.size());
+  EXPECT_EQ(1, q.front().first);
+  EXPECT_EQ(2, q.front().second);
+  EXPECT_EQ(3, q.back().first);
+  EXPECT_EQ(4, q.back().second);
+}

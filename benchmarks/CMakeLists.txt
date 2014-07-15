@@ -4,6 +4,8 @@ set(hayai_SOURCE_DIR hayai/src)
 
 include_directories(${hayai_SOURCE_DIR})
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+
 macro (add_benchmark TEST_NAME)
   # Add benchmark cpp file
   add_executable(run-${TEST_NAME} ${TEST_NAME}.cpp)

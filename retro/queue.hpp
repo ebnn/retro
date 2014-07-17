@@ -292,10 +292,6 @@ class partial_queue
     }
 
   private:
-    size_type size_;
-    inner_container_type data_;
-    inner_iterator front_;
-
     void move_front_succ(void)
     {
       // When moving the front pointer to the right, the current front
@@ -312,6 +308,11 @@ class partial_queue
       front_->second = false; --front_;
       if (front_ != data_.end()) front_->second = false;
     }
+
+    size_type size_;
+    inner_container_type data_;
+    inner_iterator front_;
+
 }; // end partial_queue
 
 } // end retro

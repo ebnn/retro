@@ -34,7 +34,7 @@ struct queue
  *
  *  \tparam The type of elements to store in the container.
  */
-template <typename T>
+template <class T>
 class partial_queue
 {
   public:

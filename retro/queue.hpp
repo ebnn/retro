@@ -154,7 +154,7 @@ class partial_queue
       data_.emplace_back(std::move(val), false); ++size_;
 
       // Find an iterator to the latest time point.
-      inner_iterator last = data_.end(); --last;
+      inner_iterator last = std::prev(data_.end());
 
       // Set front to be the first (and only) element if the queue only
       // contains one element.
@@ -197,7 +197,7 @@ class partial_queue
       {
         // Whether this element is before the front pointer is determined
         // by the element before this one.
-        inner_iterator before = it; --before;
+        inner_iterator before = std::prev(it);
         data_.insert(it, std::make_pair(std::move(val), before->second));
       }
 

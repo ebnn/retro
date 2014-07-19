@@ -46,7 +46,7 @@ class partial_queue
     typedef std::list<std::pair<value_type, bool>> inner_container_type;
     typedef typename inner_container_type::iterator inner_iterator;
 
-    /*! \brief Represents an operation performed at some point in time.
+    /*! Represents an operation performed at some point in time.
      *  \tparam Op The operation that was performed (one of the operations in
      *             retro::queue).
      */
@@ -71,79 +71,78 @@ class partial_queue
         friend class partial_queue<T>;
     };
 
-    /*! \brief Construct an empty partially retroactive queue.
+    /*! Construct an empty partially retroactive queue.
      */
     partial_queue(void)
       : size_(0), front_(data_.begin())
     {
     }
 
-    /*! \brief Copy an existing queue.
+    /*! Copy an existing queue.
      */
     partial_queue(const partial_queue &other) = default;
 
-    /*! \brief Acquire the state of an existing queue by moving it.
+    /*! Acquire the state of an existing queue by moving it.
      */
     partial_queue(partial_queue&& other)
       : size_(other.size_), front_(other.front_), data_(std::move(other.data_))
     {
     }
 
-    /*! \brief Returns the number of elements in the queue at present.
+    /*! Returns the number of elements in the container at present.
      */
     size_type size(void) const
     {
       return size_;
     }
 
-    /*! \brief Returns the maximum number of elements that this container
-     *         can store.
+    /*! Returns the maximum number of elements that this container can store.
      */
     size_type max_size(void) const
     {
       return data_.max_size();
     }
 
-    /*! \brief Returns whether the queue is empty.
+    /*! Return whether the container is empty.
      */
     bool empty(void) const
     {
       return size() == 0;
     }
 
-    /*! \brief Returns the element at the front of the queue at present.
-     *  \return A reference to the front (oldest) element.
+    /*! Returns the element at the front of the container at present.
+     *  \return A reference to the first (oldest) element.
      */
     reference front()
     {
       return front_->first;
     }
 
-    /*! \brief Returns the element at the front of the queue at present.
-     *  \return A const reference to the front (oldest) element.
+    /*! Returns the element at the front of the container at present.
+     *  \return A const reference to the first (oldest) element.
      */
     const_reference front() const
     {
       return front();
     }
 
-    /*! \brief Returns the element at the back of the queue at present.
-     *  \return A reference to the back (newest) element.
+    /*! Returns the element at the back of the queue at present.
+     *  \return A reference to the last (newest) element.
      */
     reference back()
     {
       return data_.back().first;
     }
 
-    /*! \brief Returns the element at the back of the queue at present.
-     *  \return A const reference to the back (newest) element.
+    /*! Returns the element at the back of the queue at present.
+     *  \return A const reference to the last (newest) element.
      */
     const_reference back() const
     {
       return back();
     }
 
-    /*! \brief Insert an element to the end of the queue in its present state
+    /*! Insert an element to the end of the queue in its present state
      *         by moving it.
      *  \brief val The value to move.
      *  \return A new time point representing this operation.
@@ -163,8 +162,8 @@ class partial_queue
       return time_point<queue::push>(std::move(last));
     }
 
-    /*! \brief Insert an element to the end of the queue in its present state.
-     *  \brief val The value to insert.
+    /*! Insert an element to the end of the queue in its present state.
+     *  \param val The value to insert.
      *  \return A new time point representing this operation.
      */
     time_point<queue::push> push(const T &val)
@@ -172,7 +171,7 @@ class partial_queue
       return push(val);
     }
 
-    /*! \brief Retroactively insert an element to the end of the queue before a
+    /*! Retroactively insert an element to the end of the queue before a
      *         previous time point by moving it.
      *  \param t The time point of the operation just before this one.
      *  \param val The value to move.
@@ -212,7 +211,7 @@ class partial_queue
       return time_point<queue::push>(std::move(it));
     }
 
-    /*! \brief Retroactively insert an element to the end of the queue before a
+    /*! Retroactively insert an element to the end of the queue before a
      *         previous time point.
      *  \param t The time point of the operation just before this one.
      *  \param val The value to insert.
@@ -224,7 +223,7 @@ class partial_queue
       return push(t, val);
     }
 
-    /*! \brief Pop an element from the front of the queue in its present state.
+    /*! Pop an element from the front of the queue in its present state.
      *  \return A new time point representing this operation.
      */
     time_point<queue::pop> pop(void)
@@ -236,7 +235,7 @@ class partial_queue
       return old;
     }
 
-    /*! \brief Retroactively pop an element from the front of the queue before
+    /*! Retroactively pop an element from the front of the queue before
      *         a previous time point.
      *  \param t The time point of the operation just before this one.
      *  \return A new time point representing this operation.
@@ -247,7 +246,7 @@ class partial_queue
       return pop();
     }
 
-    /*! \brief Swap the contents of this queue with another.
+    /*! Swap the contents of this queue with another.
      *  \param other The queue to swap with.
      */
     void swap(partial_queue &other)
@@ -257,7 +256,7 @@ class partial_queue
       std::swap(data_, other.data_);
     }
 
-    /*! \brief Retroactively revert a previous push operation.
+    /*! Retroactively revert a previous push operation.
      *  \param t The time point to revert.
      */
     void revert(const time_point<queue::push> &t)
@@ -282,7 +281,7 @@ class partial_queue
       data_.erase(t.it);
     }
 
-    /*! \brief Retroactively revert a previous pop operation.
+    /*! Retroactively revert a previous pop operation.
      *  \param t The time point to revert.
      */
     void revert(const time_point<queue::pop> &t)

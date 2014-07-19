@@ -12,4 +12,6 @@ macro (add_unit_test TEST_NAME)
   add_test(test-${TEST_NAME} test-${CHAPTER_NAME})
 endmacro()
 
+add_unit_test(stl_interface)
 add_unit_test(queue)
+add_unit_test(ordered_list)

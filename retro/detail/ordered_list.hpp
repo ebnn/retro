@@ -51,9 +51,16 @@ class ordered_list
       : public std::iterator<std::bidirectional_iterator_tag, T>
     {
       public:
+        typedef T* pointer;
+
         reference operator*()
         {
           return lower->value;
+        }
+
+        pointer operator->() const
+        {
+          return &lower->value;
         }
 
         iterator &operator++()

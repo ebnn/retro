@@ -12,18 +12,15 @@ namespace retro
 
 /*! \brief Specifies the operations available for a queue.
  */
-struct queue
+enum class queue
 {
-  enum
-  {
-    /*! \brief Represents pushing (enqueuing) an element into the queue.
-     */
-    push,
+  /*! \brief Represents pushing (enqueuing) an element into the queue.
+  */
+  push,
 
-    /*! \brief Represents popping (dequeuing) an element from the queue.
-     */
-    pop
-  };
+  /*! \brief Represents popping (dequeuing) an element from the queue.
+  */
+  pop
 };
 
 /*! \brief Represents a partially retroactive queue.
@@ -47,26 +44,33 @@ class partial_queue
     typedef typename inner_container_type::iterator inner_iterator;
 
     /*! Represents an operation performed at some point in time.
-     *  \tparam Op The operation that was performed (one of the operations in
-     *             retro::queue).
      */
-    template <std::size_t Op> 
     class time_point
     {
+      public:
+        /*!
+         *  \tparam Op The operation that was performed (one of the operations in
+         *             retro::queue).
+         */
+        queue operation() const { return op; }
+
       private:
-        time_point(const inner_iterator &it)
-          : it(it)
+        time_point(const inner_iterator &it, queue op)
+          : it(it), op(op)
         {
         }
 
-        time_point(inner_iterator&& it)
-          : it(std::move(it))
+        time_point(inner_iterator&& it, queue op)
+          : it(std::move(it)), op(op)
         {
         }
 
         // Iterator to the element in the linked list that represents
         // the value that was pushed/popped by this operation.
         inner_iterator it;
+
+        // The operation that was performed.
+        queue op;
 
         friend class partial_queue<T>;
     };
@@ -147,7 +151,7 @@ class partial_queue
      *  \brief val The value to move.
      *  \return A new time point representing this operation.
      */
-    time_point<queue::push> push(T&& val)
+    time_point push(T&& val)
     {
       // Add the new element to the back of the queue.
       data_.emplace_back(std::move(val), false); ++size_;
@@ -159,14 +163,14 @@ class partial_queue
       // contains one element.
       if (front_ == data_.end()) front_ = last;
 
-      return time_point<queue::push>(std::move(last));
+      return time_point(std::move(last), queue::push);
     }
 
     /*! Insert an element to the end of the queue in its present state.
      *  \param val The value to insert.
      *  \return A new time point representing this operation.
      */
-    time_point<queue::push> push(const T &val)
+    time_point push(const T &val)
     {
       return push(val);
     }
@@ -177,8 +181,7 @@ class partial_queue
      *  \param val The value to move.
      *  \return A new time point representing this retroactive operation.
      */
-    template <std::size_t Op>
-    time_point<queue::push> push(const time_point<Op> &t, T&& val)
+    time_point push(const time_point &t, T&& val)
     {
       inner_iterator it = t.it;
       if (it == data_.begin())
@@ -208,7 +211,7 @@ class partial_queue
       if (it->second) move_front_pred();
 
       // Return an iterator to the new operation.
-      return time_point<queue::push>(std::move(it));
+      return time_point(std::move(it), queue::push);
     }
 
     /*! Retroactively insert an element to the end of the queue before a
@@ -217,8 +220,7 @@ class partial_queue
      *  \param val The value to insert.
      *  \return A new time point representing this retroactive operation.
      */
-    template <std::size_t Op>
-    time_point<queue::push> push(const time_point<Op> &t, const T &val)
+    time_point push(const time_point &t, const T &val)
     {
       return push(t, val);
     }
@@ -226,11 +228,11 @@ class partial_queue
     /*! Pop an element from the front of the queue in its present state.
      *  \return A new time point representing this operation.
      */
-    time_point<queue::pop> pop(void)
+    time_point pop(void)
     {
       --size_;
 
-      time_point<queue::pop> old(front_); 
+      time_point old(front_, queue::pop); 
       move_front_succ();
       return old;
     }
@@ -240,8 +242,7 @@ class partial_queue
      *  \param t The time point of the operation just before this one.
      *  \return A new time point representing this operation.
      */
-    template <std::size_t Op>
-    time_point<queue::pop> pop(const time_point<Op> &)
+    time_point pop(const time_point &)
     {
       return pop();
     }
@@ -256,38 +257,37 @@ class partial_queue
       std::swap(data_, other.data_);
     }
 
-    /*! Retroactively revert a previous push operation.
+    /*! Retroactively revert a previous operation.
      *  \param t The time point to revert.
      */
-    void revert(const time_point<queue::push> &t)
+    void revert(const time_point &t)
     {
-      // This element was never pushed.
-      --size_;
-
-      // If t occurs before front, then that means we've previously popped an
-      // element that no longer exists, so it should have popped the element
-      // after it. Hence, move the front to its successor.
-      if (t.it->second)
+      if (t.operation() == queue::push)
       {
-        move_front_succ();
+        // This element was never pushed.
+        --size_;
+
+        // If t occurs before front, then that means we've previously popped an
+        // element that no longer exists, so it should have popped the element
+        // after it. Hence, move the front to its successor.
+        if (t.it->second)
+        {
+          move_front_succ();
+        }
+        else if (front_ == t.it)
+        {
+          // We're removing the front, so move it right to ensure validity.
+          move_front_succ();
+        }
+
+        // Remove the element corresponding to the push.
+        data_.erase(t.it);
       }
-      else if (front_ == t.it)
+      else
       {
-        // We're removing the front, so move it to the right to ensure validity.
-        move_front_succ();
+        move_front_pred();
+        ++size_; // One less pop means the size increases by 1
       }
-
-      // Remove the element corresponding to the push.
-      data_.erase(t.it);
-    }
-
-    /*! Retroactively revert a previous pop operation.
-     *  \param t The time point to revert.
-     */
-    void revert(const time_point<queue::pop> &t)
-    {
-      move_front_pred();
-      ++size_; // One less pop means the size increases by 1
     }
 
   private:

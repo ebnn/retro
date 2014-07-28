@@ -205,7 +205,6 @@ class ordered_list
 
     upper_container upper_;
     lower_container lower_;
-    upper_iterator last_upper_;
     lower_iterator last_lower_;
     lower_iterator root_;
 }; // end ordered_list

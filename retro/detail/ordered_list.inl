@@ -13,11 +13,10 @@ template <class T, class LabelType>
   // respectively.
   upper_.push_back(upper_node(0)); 
   upper_.push_back(upper_node(M() - 1));
-  last_upper_ = std::prev(upper_.end());
 
   // Create sentinels for the before-the-start and past-the-end lower nodes.
   lower_.push_back(lower_node(upper_.begin(), 0));
-  lower_.push_back(lower_node(last_upper_, M() - 1));
+  lower_.push_back(lower_node(std::prev(upper_.end()), M() - 1));
   last_lower_ = std::prev(lower_.end());
 
   // Create one more pair of sentinel upper and lower nodes in the middle 
@@ -164,7 +163,7 @@ template <class T, class LabelType>
   // Find all the nodes that need to be relabelled.
   label_type n = 1;
   label_type start_label = it->label;
-  while (cur != last_upper_ && cur->label - start_label <= n * n)
+  while (cur != last_lower_->upper && cur->label - start_label <= n * n)
   {
     ++n; ++cur;
   }

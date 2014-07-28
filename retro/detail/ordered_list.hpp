@@ -188,8 +188,8 @@ class ordered_list
 
     struct lower_node
     {
-      lower_node(upper_iterator upper, const T &value)
-        : upper(upper), label(-1), value(value)
+      lower_node(upper_iterator upper, label_type label, const T &value = T())
+        : upper(upper), label(label), value(value)
       {
       }
 
@@ -200,12 +200,14 @@ class ordered_list
 
     upper_iterator insert_upper(upper_iterator it);
 
-    void relabel_upper(upper_iterator from, upper_iterator to,
+    bool relabel_upper(upper_iterator from, upper_iterator to,
         typename upper_iterator::difference_type n);
 
-    upper_container upper_list;
-    lower_container lower_list;
+    upper_container upper_;
+    lower_container lower_;
     upper_iterator last_upper_;
+    lower_iterator last_lower_;
+    lower_iterator root_;
 }; // end ordered_list
 
 } // end detail

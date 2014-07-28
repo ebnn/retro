@@ -8,10 +8,23 @@ template <class T, class LabelType>
   ordered_list<T, LabelType>
     ::ordered_list(void)
 {
-  // Create the root upper node and a sentinel for the end of the upper list
-  upper_list.push_back(upper_node(0)); 
-  upper_list.push_back(upper_node(M() - 1));
-  last_upper_ = std::prev(upper_list.end());
+  // The upper list has sentinel nodes at the beginning and end of the list.
+  // Both containly solely the before-the-start and past-the-end lower nodes
+  // respectively.
+  upper_.push_back(upper_node(0)); 
+  upper_.push_back(upper_node(M() - 1));
+  last_upper_ = std::prev(upper_.end());
+
+  // Create sentinels for the before-the-start and past-the-end lower nodes.
+  lower_.push_back(lower_node(upper_.begin(), 0));
+  lower_.push_back(lower_node(last_upper_, M() - 1));
+  last_lower_ = std::prev(lower_.end());
+
+  // Create one more pair of sentinel upper and lower nodes in the middle 
+  // to represent the "root" of the list. The first real element inserted into
+  // the list will link to the upper root.
+  root_ = lower_.insert(last_lower_,
+                        lower_node(insert_upper(upper_.begin()), MSTART()));
 }
 
 template <class T, class LabelType>
@@ -19,7 +32,7 @@ template <class T, class LabelType>
     ordered_list<T, LabelType>
       ::size(void) const
 {
-  return lower_list.size();
+  return lower_.size() - 3; // Don't count the sentinels and root.
 }
 
 template <class T, class LabelType>
@@ -34,7 +47,8 @@ template <class T, class LabelType>
     ordered_list<T, LabelType>
       ::max_size(void) const
 {
-  return std::min((label_type)lower_list.max_size(), (label_type)((M() - 1) * LOGM()));
+  return std::min((label_type)lower_.max_size(), // Size of linked list
+                  (label_type)((M() - 1) * LOGM())); // Size of label universe 
 }
 
 template <class T, class LabelType>
@@ -42,7 +56,7 @@ template <class T, class LabelType>
     ordered_list<T, LabelType>
       ::begin(void)
 {
-  return iterator(lower_list.begin());
+  return iterator(std::next(root_));
 }
 
 template <class T, class LabelType>
@@ -50,7 +64,7 @@ template <class T, class LabelType>
     ordered_list<T, LabelType>
       ::end(void)
 {
-  return iterator(lower_list.end());
+  return iterator(last_lower_);
 }
 
 template <class T, class LabelType>
@@ -74,35 +88,35 @@ template <class T, class LabelType>
     ordered_list<T, LabelType>
       ::insert(iterator it, const T &val)
 {
-  bool is_end = (it == end());
+  // Get the iterators to the current node (the node we are inserting before)
+  // and the node's predecessor (this is guaranteed to exist because of the
+  // sentinel).
+  lower_iterator cur = it.lower;
+  lower_iterator prev = std::prev(cur);
 
-  lower_iterator cur = is_end ? lower_list.end() : it.lower;
-  upper_iterator cur_upper = is_end ? std::prev(last_upper_) : cur->upper;
-  label_type cur_label = is_end ? M() - 1 : cur->label;
+  // Get the upper node which this new node will link to.
+  upper_iterator upper = prev->upper;
 
-  // If there's a node before cur, get its label.
-  label_type prev_label = (cur == lower_list.begin()) ? 0 : std::prev(cur)->label;
-
-  // Create a new lower node just before cur
-  lower_iterator result = lower_list.insert(cur, lower_node(cur_upper, val));
+  // Create a new lower node just before cur.
+  lower_iterator result = lower_.insert(cur, lower_node(upper, 0, val));
 
   // Check if we can give the new lower node a label
-  if (prev_label + 1 >= cur_label)
+  if (prev->label + 1 >= cur->label)
   {
     // There is no more available labels left for this node, so we have
     // to relabel the sublist by dividing it into several sublists.
+ 
+    // Find the exclusive boundaries of the sublist (all nodes who have the
+    // same upper node as prev). Note that no bounds checking is required
+    // because of the sentinels at the start and end of the lower list.
+    lower_iterator begin = std::prev(prev);
+    while (begin->upper == upper) --begin;
 
-    // Predicate to find the boundaries of the sublist
-    auto pred = [&cur_upper](const lower_node &node) -> bool
-    { return node.upper == cur_upper; };
+    lower_iterator end = cur;
+    while (end->upper == upper) ++end;
 
-    // Find the boundaries of the sublist
-    auto begin = std::find_if_not(std::reverse_iterator<lower_iterator>(cur),
-        lower_list.rend(), pred);
-    auto end = std::find_if_not(cur, lower_list.end(), pred);
-
-    // Redistribute nodes
-    cur = begin.base();
+    // Redistribute nodes starting at the first node in the sublist.
+    cur = std::next(begin);
 
     while (true)
     {
@@ -113,15 +127,15 @@ template <class T, class LabelType>
           return result; // We've finished relabeling the sublist
 
         cur->label = label;
-        cur->upper = cur_upper;
+        cur->upper = upper;
       }
 
-      cur_upper = insert_upper(cur_upper);
+      upper = insert_upper(upper);
     }
   }
   else
   {
-    result->label = cur_label / 2 + prev_label / 2;
+    result->label = (cur->label + prev->label) / 2;
     return result;
   }
 }
@@ -145,42 +159,42 @@ template <class T, class LabelType>
     ordered_list<T, LabelType>
       ::insert_upper(upper_iterator it)
 {
-  label_type n = 1;
   upper_iterator cur = std::next(it);
 
-  label_type v0 = it->label;
-
-  while (cur != last_upper_ && cur->label - v0 <= n * n)
+  // Find all the nodes that need to be relabelled.
+  label_type n = 1;
+  label_type start_label = it->label;
+  while (cur != last_upper_ && cur->label - start_label <= n * n)
   {
     ++n; ++cur;
   }
 
-  if (n > 0)
-    relabel_upper(it, cur, n);
-
-  // TODO: check this more concisely
-  ++it;
-  label_type new_label = v0 / 2 + it->label / 2;
-  if (v0 + 1 >= new_label || new_label + 1 >= it->label)
+  // Relabel these nodes.
+  if (!relabel_upper(it, cur, n))
   {
-    relabel_upper(upper_list.begin(), last_upper_, upper_list.size() - 1);
+    // Relabeling was not successful, need to rebuild entire upper list.
+    relabel_upper(upper_.begin(), upper_.end(), upper_.size());
   }
 
-  return upper_list.insert(it, upper_node(v0 / 2 + it->label / 2));
+  // The label of the new node is the mean of the two adjacent to it.
+  start_label = it->label;
+  ++it;
+  return upper_.insert(it, upper_node((start_label + it->label) / 2));
 }
 
 template <class T, class LabelType>
-  void ordered_list<T, LabelType>
+  bool ordered_list<T, LabelType>
     ::relabel_upper(upper_iterator from, upper_iterator to,
       typename upper_iterator::difference_type n)
 {
   label_type gap = (to->label - from->label) / n;
+  if (gap == (label_type)1) return false;
 
   // Relabel the sequence as arithmetic sequence starting at the label of
   // the first node and incrementing by 'gap' per node.
-  label_type label = from->label;
-  for (typename upper_iterator::difference_type k = 0; k < n; ++k, label += gap, ++from)
+  for (label_type label = from->label; n--; label += gap, ++from)
     from->label = label;
+  return true;
 }
 
 }

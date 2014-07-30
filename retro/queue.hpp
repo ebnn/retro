@@ -43,14 +43,13 @@ class partial_queue
     typedef std::list<std::pair<value_type, bool>> inner_container_type;
     typedef typename inner_container_type::iterator inner_iterator;
 
-    /*! Represents an operation performed at some point in time.
+    /*! Represents an operation performed on the data structure at some point
+     *  in time.
      */
     class time_point
     {
       public:
-        /*!
-         *  \tparam Op The operation that was performed (one of the operations in
-         *             retro::queue).
+        /*! Get the operation that was performed.
          */
         queue operation() const { return op; }
 
@@ -86,35 +85,35 @@ class partial_queue
      */
     partial_queue(const partial_queue &other) = default;
 
-    /*! Acquire the state of an existing queue by moving it.
+    /*! Construct a queue by acquiring the state of an existing queue.
      */
     partial_queue(partial_queue&& other)
       : size_(other.size_), front_(other.front_), data_(std::move(other.data_))
     {
     }
 
-    /*! Returns the number of elements in the container at present.
+    /*! Return the number of elements in the container at present.
      */
     size_type size(void) const
     {
       return size_;
     }
 
-    /*! Returns the maximum number of elements that this container can store.
+    /*! Return the maximum number of elements that this container can store.
      */
     size_type max_size(void) const
     {
       return data_.max_size();
     }
 
-    /*! Return whether the container is empty.
+    /*! Return whether the container is empty at present.
      */
     bool empty(void) const
     {
       return size() == 0;
     }
 
-    /*! Returns the element at the front of the container at present.
+    /*! Return the element at the front of the container at present.
      *  \return A reference to the first (oldest) element.
      */
     reference front()
@@ -122,7 +121,7 @@ class partial_queue
       return front_->first;
     }
 
-    /*! Returns the element at the front of the container at present.
+    /*! Return the element at the front of the container at present.
      *  \return A const reference to the first (oldest) element.
      */
     const_reference front() const
@@ -130,7 +129,7 @@ class partial_queue
       return front();
     }
 
-    /*! Returns the element at the back of the queue at present.
+    /*! Return the element at the back of the queue at present.
      *  \return A reference to the last (newest) element.
      */
     reference back()
@@ -138,7 +137,7 @@ class partial_queue
       return data_.back().first;
     }
 
-    /*! Returns the element at the back of the queue at present.
+    /*! Return the element at the back of the queue at present.
      *  \return A const reference to the last (newest) element.
      */
     const_reference back() const
@@ -175,9 +174,9 @@ class partial_queue
       return push(val);
     }
 
-    /*! Retroactively insert an element to the end of the queue before a
-     *         previous time point by moving it.
-     *  \param t The time point of the operation just before this one.
+    /*! Retroactively insert an element to the end of the queue just before
+     *  some time point by moving it.
+     *  \param t The time point of the operation just before this new one.
      *  \param val The value to move.
      *  \return A new time point representing this retroactive operation.
      */

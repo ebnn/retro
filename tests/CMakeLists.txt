@@ -13,5 +13,7 @@ macro (add_unit_test TEST_NAME)
 endmacro()
 
 add_unit_test(stl_interface)
+add_unit_test(stl_iterator)
 add_unit_test(queue)
+add_unit_test(map)
 add_unit_test(ordered_list)

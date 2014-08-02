@@ -6,6 +6,7 @@
 
 #include <list>
 #include <map>
+#include <set>
 
 #include "retro/detail/ordered_list.hpp"
 
@@ -34,6 +35,20 @@ namespace detail
   //! Checks if a particular key is in the map at some previous time point.
   template <class MapIterator, class EventIterator>
   bool key_exists(MapIterator map_it, EventIterator event_it);
+
+  template <class Compare, class T>
+  struct comp_wrapper
+  {
+    comp_wrapper(const Compare &comp)
+      : comp(comp) { }
+
+    bool operator()(const T &a, const T &b) const
+    {
+      return comp(a, b);
+    }
+
+    Compare comp;
+  };
 } // end detail
 
 /*! \brief Represents a fully retroactive ordered associative map.
@@ -44,13 +59,15 @@ class full_map
   private:
     struct event;
 
-    typedef std::multimap<Key, T> data_container;
+    typedef std::list<std::pair<Key, T>> data_container;
     typedef typename data_container::iterator data_iterator;
 
     typedef detail::ordered_list<event> event_container;
     typedef typename event_container::iterator event_iterator;
 
-    typedef std::map<Key, std::set<event_iterator>> map_container;
+    typedef std::map<std::reference_wrapper<const Key>,
+                     std::set<event_iterator>,
+                     detail::comp_wrapper<Compare, Key>> map_container;
     typedef typename map_container::iterator map_iterator;
 
   public:

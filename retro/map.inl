@@ -3,7 +3,7 @@ namespace retro
 
 template <class Key, class T, class Compare>
   full_map<Key, T, Compare>::full_map(const key_compare &comp)
-    : map_(comp)
+    : map_(detail::comp_wrapper<key_compare, Key>(comp))
 {
 }
 
@@ -39,7 +39,17 @@ template <class Key, class T, class Compare>
   typename full_map<Key, T, Compare>::time_point
     full_map<Key, T, Compare>::insert(const value_type &val)
 {
-  return insert(time_point(events_.end()), val);
+  // Insert this value into the data map because even if this key already
+  // exists, it may be used if the previous insert for this key is revoked.
+  auto data_it = data_.insert(data_.end(), val);
+
+  // Insert this event in the ordered list
+  auto event_it = events_.insert(events_.end(), event(map::insert, data_it));
+
+  // Reference this event in the event map (insert to the end of the set).
+  map_[val.first].insert(event_it);
+
+  return time_point(map::insert, event_it);
 }
 
 template <class Key, class T, class Compare>
@@ -48,14 +58,13 @@ template <class Key, class T, class Compare>
 {
   // Insert this value into the data map because even if this key already
   // exists, it may be used if the previous insert for this key is revoked.
-  auto data_it = data_.insert(val);
+  auto data_it = data_.insert(data_.end(), val);
 
   // Insert this event in the ordered list
   auto event_it = events_.insert(t.event, event(map::insert, data_it));
 
-  // Reference this event in the event map (insert to the end of the set).
-  auto &event_set = map_[val.first];
-  event_set.insert(event_set.end(), event_it);
+  // Reference this event in the event map. 
+  map_[val.first].insert(event_it);
 
   return time_point(map::insert, event_it);
 }

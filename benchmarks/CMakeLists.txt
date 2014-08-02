@@ -16,5 +16,6 @@ macro (add_benchmark TEST_NAME)
   add_test(run_${TEST_NAME} run_${CHAPTER_NAME})
 endmacro()
 
-add_benchmark(queue)
 add_benchmark(ordered_list)
+add_benchmark(queue)
+add_benchmark(map)

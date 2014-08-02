@@ -152,6 +152,16 @@ class full_map
           return old;
         }
 
+        bool operator<(const iterator &other) const
+        {
+          return base < other.base;
+        }
+
+        bool operator>(const iterator &other) const
+        {
+          return base > other.base;
+        }
+
         bool operator==(const iterator &other) const
         {
           return base == other.base;
@@ -209,6 +219,16 @@ class full_map
           while (!key_exists(base, event));
           if (base != last) cur = *std::prev(base->second.lower_bound(event));
           return *this;
+        }
+
+        bool operator<(const iterator &other) const
+        {
+          return base < other.base;
+        }
+
+        bool operator>(const iterator &other) const
+        {
+          return base > other.base;
         }
 
         bool operator==(const retro_iterator &other) const
